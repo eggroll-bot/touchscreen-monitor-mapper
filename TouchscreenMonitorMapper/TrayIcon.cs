@@ -5,6 +5,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
+using Microsoft.Win32;
+
 using Windows.Devices.Display;
 using Windows.Devices.Enumeration;
 using Windows.Devices.HumanInterfaceDevice;
@@ -18,6 +20,7 @@ namespace TouchscreenMonitorMapper
 	{
 		private const ushort hidUsagePageDigitizer = 0x0D;
 		private const ushort hidUsageDigitizerTouchScreen = 0x04;
+		private const string touchscreenSettingsRegistryKeyPath = @"SOFTWARE\Microsoft\Wisp\Pen\Digimon";
 		private readonly NotifyIcon notifyIcon;
 		private readonly Dictionary<string, string> touchscreenIdToMonitorId = new( );
 
@@ -26,10 +29,13 @@ namespace TouchscreenMonitorMapper
 		/// </summary>
 		internal TrayIcon( )
 		{
-			notifyIcon = new NotifyIcon( );
-			notifyIcon.Icon = new Icon( AppDomain.CurrentDomain.BaseDirectory + "tray_icon.ico" );
-			notifyIcon.Text = "Touchscreen Monitor Mapper";
-			notifyIcon.ContextMenuStrip = new ContextMenuStrip( );
+			notifyIcon = new NotifyIcon
+			{
+				Icon = new Icon( AppDomain.CurrentDomain.BaseDirectory + "tray_icon.ico" ),
+				Text = "Touchscreen Monitor Mapper",
+				ContextMenuStrip = new ContextMenuStrip( )
+			};
+
 			notifyIcon.ContextMenuStrip.RenderMode = ToolStripRenderMode.System;
 			PopulateTrayIconMenu( );
 			notifyIcon.Visible = true;
@@ -86,28 +92,56 @@ namespace TouchscreenMonitorMapper
 					DisplayMonitor displayMonitor = await DisplayMonitor.FromInterfaceIdAsync( monitor.Id );
 					string displayName = string.IsNullOrEmpty( displayMonitor.DisplayName ) ? monitor.Name : displayMonitor.DisplayName;
 					ToolStripItem displayItem = touchscreenDropdownMenu.DropDownItems.Add( displayName );
-					// TODO: If dictionary has no mapping from touchscreen to monitor, check the save file. If the save file has it, add the mapping to the dictionary and update the mapping in the registry.
 
 					displayItem.Click += ( _, _ ) =>
 					{
 						touchscreenIdToMonitorId[ touchscreens[ i ].Id ] = monitor.Id;
-						UpdateMapping( touchscreens[ i ].Id, monitor.Id );
-						UpdateMappingSaveFile( );
+						UpdateMapping( touchscreens[ i ].Id );
 					};
 				}
 			}
 		}
 
-		private void UpdateMapping( string touchscreenId, string monitorId )
+		private void UpdateMapping( string touchscreenId )
 		{
-			// TODO: Update the mapping in the registry.
-			throw new NotImplementedException( );
-		}
+			try
+			{
+				RegistryKey touchscreenSettingsRegistryKey = Registry.LocalMachine.OpenSubKey( touchscreenSettingsRegistryKeyPath, true );
 
-		private void UpdateMappingSaveFile( )
-		{
-			// TODO: Update file that saves touchscreen to monitor mapping data.
-			throw new NotImplementedException( );
+				if ( touchscreenSettingsRegistryKey == null )
+				{
+					MessageBox.Show( "Could not write to registry. Registry key not found.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error );
+
+					return;
+				}
+
+				string touchscreenRegistryValueToSet = null;
+				string[ ] touchscreenRegistryValues = touchscreenSettingsRegistryKey.GetValueNames( );
+
+				foreach ( string touchscreenRegistryValue in touchscreenRegistryValues )
+				{
+					if ( touchscreenRegistryValue.Contains( touchscreenId ) )
+					{
+						touchscreenRegistryValueToSet = touchscreenRegistryValue;
+						break;
+					}
+				}
+
+				if ( touchscreenRegistryValueToSet == null )
+				{
+					MessageBox.Show( "Could not write to registry. Touchscreen does not exist in the registry.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error );
+
+					return;
+				}
+
+				touchscreenSettingsRegistryKey.SetValue( touchscreenRegistryValueToSet, touchscreenIdToMonitorId[ touchscreenId ] );
+				touchscreenSettingsRegistryKey.Close( );
+			} catch
+			{
+				MessageBox.Show( "Could not write to registry. Insufficient permissions. Try running the program as administrator.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error );
+
+				return;
+			}
 		}
 
 		/// <summary>
