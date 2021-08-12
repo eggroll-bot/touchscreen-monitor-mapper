@@ -1,6 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
+
+using Windows.Devices.Display;
+using Windows.Devices.Enumeration;
+using Windows.Devices.HumanInterfaceDevice;
 
 namespace TouchscreenMonitorMapper
 {
@@ -9,7 +16,11 @@ namespace TouchscreenMonitorMapper
 	/// </summary>
 	internal class TrayIcon
 	{
+		private const ushort hidUsagePageDigitizer = 0x0D;
+		private const ushort hidUsageDigitizerTouchScreen = 0x04;
 		private readonly NotifyIcon notifyIcon;
+		private List<DeviceInformation> touchscreenList; // Use a list to ensure consistent ordering.
+		private List<DeviceInformation> monitorList; // Use a list to ensure consistent ordering.
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="TrayIcon" /> class.
@@ -33,16 +44,15 @@ namespace TouchscreenMonitorMapper
 			ToolStripItemCollection trayItems = notifyIcon.ContextMenuStrip.Items;
 			trayItems.Add( new ToolStripLabel( "Touchscreen Monitor Mapper" ) );
 			trayItems.Add( new ToolStripSeparator( ) );
-			trayItems.Add( new ToolStripLabel( "" ) );
-			trayItems.Add( new ToolStripLabel( "" ) );
+			trayItems.Add( new ToolStripMenuItem( "Touchscreens" ) );
 			trayItems.Add( new ToolStripSeparator( ) );
 			trayItems.Add( "Exit", null, Exit );
 
-			notifyIcon.MouseClick += ( object sender, MouseEventArgs eventArgs ) =>
+			notifyIcon.MouseClick += async ( object sender, MouseEventArgs eventArgs ) =>
 			{
 				if ( eventArgs.Button == MouseButtons.Right )
 				{
-					UpdateDevicesInUi( );
+					await UpdateDevicesInUi( );
 				}
 			};
 		}
@@ -50,9 +60,37 @@ namespace TouchscreenMonitorMapper
 		/// <summary>
 		/// Updates touchscreens and monitors in the tray icon's dropdown menus.
 		/// </summary>
-		private void UpdateDevicesInUi( )
+		private async Task UpdateDevicesInUi( )
 		{
-			throw new NotImplementedException( );
+			string touchscreenAqs = HidDevice.GetDeviceSelector( hidUsagePageDigitizer, hidUsageDigitizerTouchScreen );
+			DeviceInformationCollection touchscreens = await DeviceInformation.FindAllAsync( touchscreenAqs );
+			touchscreenList = touchscreens.ToList( );
+			string monitorAqs = DisplayMonitor.GetDeviceSelector( );
+			DeviceInformationCollection monitors = await DeviceInformation.FindAllAsync( monitorAqs );
+			monitorList = monitors.ToList( );
+
+			if ( !touchscreenList.Any( ) || !monitorList.Any( ) )
+			{
+				MessageBox.Show( "No touchscreen or no monitor found.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error );
+
+				return;
+			}
+
+			ToolStripMenuItem touchscreensDropdownMenu = ( ToolStripMenuItem ) notifyIcon.ContextMenuStrip.Items[ 2 ];
+			touchscreensDropdownMenu.DropDownItems.Clear( );
+
+			for ( int i = 0; i < touchscreenList.Count; i++ )
+			{
+				ToolStripMenuItem touchscreenDropdownMenu = new ToolStripMenuItem( "Touchscreen #" + i + 1 );
+				touchscreensDropdownMenu.DropDownItems.Add( touchscreenDropdownMenu );
+
+				foreach ( DeviceInformation monitor in monitorList )
+				{
+					DisplayMonitor displayMonitor = await DisplayMonitor.FromInterfaceIdAsync( monitor.Id );
+					string displayName = string.IsNullOrEmpty( displayMonitor.DisplayName ) ? monitor.Name : displayMonitor.DisplayName;
+					touchscreenDropdownMenu.DropDownItems.Add( displayName );
+				}
+			}
 		}
 
 		/// <summary>
