@@ -102,6 +102,10 @@ namespace TouchscreenMonitorMapper
 			}
 		}
 
+		/// <summary>
+		/// Updates the mapping between touchscreens and monitors in the registry.
+		/// </summary>
+		/// <param name="touchscreenId">The device ID of the touchscreen.</param>
 		private void UpdateMapping( string touchscreenId )
 		{
 			try
