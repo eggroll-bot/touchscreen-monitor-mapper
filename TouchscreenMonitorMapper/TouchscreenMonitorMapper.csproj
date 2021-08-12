@@ -18,4 +18,10 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="tray_icon.ico">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
