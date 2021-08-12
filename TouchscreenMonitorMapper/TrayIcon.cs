@@ -81,7 +81,7 @@ namespace TouchscreenMonitorMapper
 
 			for ( int i = 0; i < touchscreenList.Count; i++ )
 			{
-				ToolStripMenuItem touchscreenDropdownMenu = new ToolStripMenuItem( "Touchscreen #" + ( i + 1 ) );
+				ToolStripMenuItem touchscreenDropdownMenu = new( "Touchscreen #" + ( i + 1 ) );
 				touchscreensDropdownMenu.DropDownItems.Add( touchscreenDropdownMenu );
 
 				foreach ( DeviceInformation monitor in monitorList )
