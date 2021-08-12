@@ -133,6 +133,7 @@ namespace TouchscreenMonitorMapper
 
 				if ( touchscreenRegistryValueToSet == null )
 				{
+					touchscreenSettingsRegistryKey.Close( );
 					MessageBox.Show( "Could not write to registry. Touchscreen does not exist in the registry.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error );
 
 					return;
