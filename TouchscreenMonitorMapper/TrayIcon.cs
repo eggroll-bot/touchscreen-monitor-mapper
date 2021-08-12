@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-
-using Microsoft.Win32;
 
 using Windows.Devices.Display;
 using Windows.Devices.Enumeration;
@@ -20,9 +17,7 @@ namespace TouchscreenMonitorMapper
 	{
 		private const ushort hidUsagePageDigitizer = 0x0D;
 		private const ushort hidUsageDigitizerTouchScreen = 0x04;
-		private const string touchscreenSettingsRegistryKeyPath = @"SOFTWARE\Microsoft\Wisp\Pen\Digimon";
 		private readonly NotifyIcon notifyIcon;
-		private readonly Dictionary<string, string> touchscreenIdToMonitorId = new( );
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="TrayIcon" /> class.
@@ -92,60 +87,8 @@ namespace TouchscreenMonitorMapper
 					DisplayMonitor displayMonitor = await DisplayMonitor.FromInterfaceIdAsync( monitor.Id );
 					string displayName = string.IsNullOrEmpty( displayMonitor.DisplayName ) ? monitor.Name : displayMonitor.DisplayName;
 					ToolStripItem displayItem = touchscreenDropdownMenu.DropDownItems.Add( displayName );
-
-					displayItem.Click += ( _, _ ) =>
-					{
-						touchscreenIdToMonitorId[ touchscreens[ i ].Id ] = monitor.Id;
-						UpdateMapping( touchscreens[ i ].Id );
-					};
+					displayItem.Click += ( _, _ ) => TouchscreenMonitorHelper.UpdateMapping( touchscreens[ i ].Id, monitor.Id );
 				}
-			}
-		}
-
-		/// <summary>
-		/// Updates the mapping between touchscreens and monitors in the registry.
-		/// </summary>
-		/// <param name="touchscreenId">The device ID of the touchscreen.</param>
-		private void UpdateMapping( string touchscreenId )
-		{
-			try
-			{
-				RegistryKey touchscreenSettingsRegistryKey = Registry.LocalMachine.OpenSubKey( touchscreenSettingsRegistryKeyPath, true );
-
-				if ( touchscreenSettingsRegistryKey == null )
-				{
-					MessageBox.Show( "Could not write to registry. Registry key not found.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error );
-
-					return;
-				}
-
-				string touchscreenRegistryValueToSet = null;
-				string[ ] touchscreenRegistryValues = touchscreenSettingsRegistryKey.GetValueNames( );
-
-				foreach ( string touchscreenRegistryValue in touchscreenRegistryValues )
-				{
-					if ( touchscreenRegistryValue.Contains( touchscreenId ) )
-					{
-						touchscreenRegistryValueToSet = touchscreenRegistryValue;
-						break;
-					}
-				}
-
-				if ( touchscreenRegistryValueToSet == null )
-				{
-					touchscreenSettingsRegistryKey.Close( );
-					MessageBox.Show( "Could not write to registry. Touchscreen does not exist in the registry.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error );
-
-					return;
-				}
-
-				touchscreenSettingsRegistryKey.SetValue( touchscreenRegistryValueToSet, touchscreenIdToMonitorId[ touchscreenId ] );
-				touchscreenSettingsRegistryKey.Close( );
-			} catch
-			{
-				MessageBox.Show( "Could not write to registry. Insufficient permissions. Try running the program as administrator.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error );
-
-				return;
 			}
 		}
 
