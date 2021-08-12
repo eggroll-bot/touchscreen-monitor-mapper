@@ -19,8 +19,7 @@ namespace TouchscreenMonitorMapper
 		private const ushort hidUsagePageDigitizer = 0x0D;
 		private const ushort hidUsageDigitizerTouchScreen = 0x04;
 		private readonly NotifyIcon notifyIcon;
-		private List<DeviceInformation> touchscreenList; // Use a list to ensure consistent ordering.
-		private List<DeviceInformation> monitorList; // Use a list to ensure consistent ordering.
+		private readonly Dictionary<string, string> touchscreenIdToMonitorId = new( );
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="TrayIcon" /> class.
@@ -64,12 +63,10 @@ namespace TouchscreenMonitorMapper
 		{
 			string touchscreenAqs = HidDevice.GetDeviceSelector( hidUsagePageDigitizer, hidUsageDigitizerTouchScreen );
 			DeviceInformationCollection touchscreens = await DeviceInformation.FindAllAsync( touchscreenAqs );
-			touchscreenList = touchscreens.ToList( );
 			string monitorAqs = DisplayMonitor.GetDeviceSelector( );
 			DeviceInformationCollection monitors = await DeviceInformation.FindAllAsync( monitorAqs );
-			monitorList = monitors.ToList( );
 
-			if ( !touchscreenList.Any( ) || !monitorList.Any( ) )
+			if ( !touchscreens.Any( ) || !monitors.Any( ) )
 			{
 				MessageBox.Show( "No touchscreen or no monitor found.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error );
 
@@ -79,18 +76,38 @@ namespace TouchscreenMonitorMapper
 			ToolStripMenuItem touchscreensDropdownMenu = ( ToolStripMenuItem ) notifyIcon.ContextMenuStrip.Items[ 2 ];
 			touchscreensDropdownMenu.DropDownItems.Clear( );
 
-			for ( int i = 0; i < touchscreenList.Count; i++ )
+			for ( int i = 0; i < touchscreens.Count; i++ )
 			{
 				ToolStripMenuItem touchscreenDropdownMenu = new( "Touchscreen #" + ( i + 1 ) );
 				touchscreensDropdownMenu.DropDownItems.Add( touchscreenDropdownMenu );
 
-				foreach ( DeviceInformation monitor in monitorList )
+				foreach ( DeviceInformation monitor in monitors )
 				{
 					DisplayMonitor displayMonitor = await DisplayMonitor.FromInterfaceIdAsync( monitor.Id );
 					string displayName = string.IsNullOrEmpty( displayMonitor.DisplayName ) ? monitor.Name : displayMonitor.DisplayName;
-					touchscreenDropdownMenu.DropDownItems.Add( displayName );
+					ToolStripItem displayItem = touchscreenDropdownMenu.DropDownItems.Add( displayName );
+					// TODO: If dictionary has no mapping from touchscreen to monitor, check the save file. If the save file has it, add the mapping to the dictionary and update the mapping in the registry.
+
+					displayItem.Click += ( _, _ ) =>
+					{
+						touchscreenIdToMonitorId[ touchscreens[ i ].Id ] = monitor.Id;
+						UpdateMapping( touchscreens[ i ].Id, monitor.Id );
+						UpdateMappingSaveFile( );
+					};
 				}
 			}
+		}
+
+		private void UpdateMapping( string touchscreenId, string monitorId )
+		{
+			// TODO: Update the mapping in the registry.
+			throw new NotImplementedException( );
+		}
+
+		private void UpdateMappingSaveFile( )
+		{
+			// TODO: Update file that saves touchscreen to monitor mapping data.
+			throw new NotImplementedException( );
 		}
 
 		/// <summary>
