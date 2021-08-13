@@ -87,7 +87,8 @@ namespace TouchscreenMonitorMapper
 					DisplayMonitor displayMonitor = await DisplayMonitor.FromInterfaceIdAsync( monitor.Id );
 					string displayName = string.IsNullOrEmpty( displayMonitor.DisplayName ) ? monitor.Name : displayMonitor.DisplayName;
 					ToolStripItem displayItem = touchscreenDropdownMenu.DropDownItems.Add( displayName );
-					displayItem.Click += ( _, _ ) => TouchscreenMonitorHelper.UpdateMapping( touchscreens[ i ].Id, monitor.Id );
+					DeviceInformation touchscreen = touchscreens[ i ];
+					displayItem.Click += ( _, _ ) => TouchscreenMonitorHelper.UpdateMapping( touchscreen.Id, monitor.Id );
 				}
 			}
 		}

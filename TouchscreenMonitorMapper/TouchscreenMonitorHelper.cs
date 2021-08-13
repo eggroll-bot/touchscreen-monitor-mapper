@@ -1,4 +1,4 @@
-﻿using System;
+﻿using System.Diagnostics;
 using System.Windows.Forms;
 
 using Microsoft.Win32;
@@ -52,7 +52,7 @@ namespace TouchscreenMonitorMapper
 
 				touchscreenSettingsRegistryKey.SetValue( touchscreenRegistryValueToSet, monitorId );
 				touchscreenSettingsRegistryKey.Close( );
-				RestartWisptis( );
+				RestartDwmExe( );
 			} catch
 			{
 				MessageBox.Show( "Could not write to registry. Insufficient permissions. Try running the program as administrator.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error );
@@ -62,12 +62,12 @@ namespace TouchscreenMonitorMapper
 		}
 
 		/// <summary>
-		/// Restarts wisptis.exe to allow the registry changes to take effect.
+		/// Restarts dwm.exe to allow the registry changes to take effect.
 		/// </summary>
-		private static void RestartWisptis( )
+		private static void RestartDwmExe( )
 		{
-			// TODO: Implement.
-			throw new NotImplementedException( );
+			// The desktop window manager automatically re-opens when closed, so we just need to close it.
+			Process.GetProcessesByName( "dwm" )[ 0 ].Kill( );
 		}
 	}
 }
